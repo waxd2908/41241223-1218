@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>待辦事項管理</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f4f6f9;
+        }
+
+        .container {
+            margin-top: 30px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        .response-message {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .response-message.success {
+            background-color: #e7ffe7;
+            color: #4CAF50;
+        }
+
+        .response-message.error {
+            background-color: #ffe7e7;
+            color: #f44336;
+        }
+
+        .todo-list li {
+            padding: 10px;
+            margin: 5px 0;
+            background-color: #f9f9f9;
+            border-left: 5px solid #4CAF50;
+            border-radius: 4px;
+        }
+
+        .todo-list li.completed {
+            background-color: #e7ffe7;
+            border-left-color: #8BC34A;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="index.html">API 範例</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav">
+                        <li class="nav-item"><a class="nav-link" href="stocks.html">股票資訊</a></li>
+                        <li class="nav-item"><a class="nav-link" href="meteorological.html">氣象資訊</a></li>
+                        <li class="nav-item"><a class="nav-link" href="air.html">空氣品質</a></li>
+                        <li class="nav-item"><a class="nav-link" href="qrcode.html">Qrcode</a></li>
+                        <li class="nav-item"><a class="nav-link" href="api.html">自製API</a></li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container mt-5">
+        <h1 class="text-center">待辦事項管理系統</h1>
+
+        <!-- 學生 ID 輸入區域 -->
+        <div class="mb-3">
+            <label for="student_id" class="form-label">請輸入學生 ID：</label>
+            <input type="text" class="form-control" id="student_id" placeholder="請輸入學生 ID" required>
+        </div>
+
+        <!-- 新增代辦事項區域 -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">新增事項</h5>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <input type="text" id="task" class="form-control" placeholder="請輸入代辦事項" required>
+                    </div>
+                    <div class="col-md-6">
+                        <button id="addTodoButton" class="btn btn-primary">新增代辦事項</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 獲取所有代辦事項 -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">代辦事項列表</h5>
+                <button onclick="getTodos()" class="btn btn-info mb-3">獲取所有代辦事項</button>
+                <ul id="todoList" class="todo-list"></ul>
+            </div>
+        </div>
+
+        <!-- 更新代辦事項 -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">更新代辦事項</h5>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <input type="number" id="updateId" class="form-control" placeholder="輸入要更新的 ID" required>
+                    </div>
+                    <div class="col-md-4">
+                        <input type="text" id="updateTask" class="form-control" placeholder="輸入更新後的事項" required>
+                    </div>
+                    <div class="col-md-4">
+                        <select id="updateCompleted" class="form-select">
+                            <option value="true">已完成</option>
+                            <option value="false">未完成</option>
+                        </select>
+                    </div>
+                </div>
+                <button onclick="updateTodo()" class="btn btn-warning mt-3">更新代辦事項</button>
+            </div>
+        </div>
+
+        <!-- 刪除代辦事項 -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">刪除代辦事項</h5>
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <input type="number" id="deleteId" class="form-control" placeholder="輸入要刪除的 ID" required>
+                    </div>
+                    <div class="col-md-4">
+                        <button onclick="deleteTodo()" class="btn btn-danger">刪除</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 顯示操作結果 -->
+        <div id="responseMessage" class="response-message"></div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const apiUrl = 'https://nfutest.pythonanywhere.com/todos';
+
+        // 新增代辦事項
+        document.getElementById('addTodoButton').addEventListener('click', async function () {
+            const studentId = document.getElementById('student_id').value;
+            const task = document.getElementById('task').value;
+
+            if (!studentId || !task) {
+                document.getElementById('responseMessage').textContent = '請填寫學生 ID 和代辦事項。';
+                document.getElementById('responseMessage').className = 'response-message error';
+                return;
+            }
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        student_id: studentId,
+                        task: task
+                    })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    document.getElementById('responseMessage').textContent = `新增成功！ID: ${data.id}, 內容: ${data.task}, 完成狀態: ${data.completed}`;
+                    document.getElementById('responseMessage').className = 'response-message success';
+                    document.getElementById('task').value = ''; // 清空輸入框
+                } else {
+                    document.getElementById('responseMessage').textContent = '新增代辦事項失敗。';
+                    document.getElementById('responseMessage').className = 'response-message error';
+                }
+            } catch (error) {
+                document.getElementById('responseMessage').textContent = '錯誤：' + error.message;
+                document.getElementById('responseMessage').className = 'response-message error';
+            }
+        });
+
+        // 獲取所有代辦事項
+        async function getTodos() {
+            const studentId = document.getElementById('student_id').value;
+
+            if (!studentId) {
+                document.getElementById('responseMessage').textContent = '請輸入學生 ID 以查看代辦事項。';
+                document.getElementById('responseMessage').className = 'response-message error';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${apiUrl}?student_id=${studentId}`);
+                const data = await response.json();
+                console.log("API 回傳資料:", data); // 用於除錯
+
+                const todoList = document.getElementById('todoList');
+                todoList.innerHTML = ''; // 清空列表
+
+                const todos = Array.isArray(data) ? data : data.todos || []; // 處理不同資料格式
+                todos.forEach(todo => {
+                    const listItem = document.createElement('li');
+                    listItem.className = todo.completed ? 'completed' : '';
+                    listItem.innerHTML = `ID: <strong>${todo.id}</strong> - 代辦事項: ${todo.task} - 完成狀態: ${todo.completed ? '已完成' : '未完成'}`;
+                    todoList.appendChild(listItem);
+                });
+
+            } catch (error) {
+                console.error("錯誤：", error);
+                document.getElementById('responseMessage').textContent = '錯誤：' + error.message;
+                document.getElementById('responseMessage').className = 'response-message error';
+            }
+        }
+
+
+        // 更新代辦事項
+        async function updateTodo() {
+            const studentId = document.getElementById('student_id').value; // 取得學生 ID
+            const id = document.getElementById('updateId').value; // 取得代辦事項 ID
+            const task = document.getElementById('updateTask').value; // 取得更新內容
+            const completed = document.getElementById('updateCompleted').value; // 取得完成狀態
+
+            // 檢查輸入資料是否完整
+            if (!studentId || !id || !task) {
+                document.getElementById('responseMessage').textContent = '請填寫學生 ID、更新所需的 ID 和代辦事項。';
+                document.getElementById('responseMessage').className = 'response-message error';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${apiUrl}/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        student_id: studentId, // 傳遞學生 ID
+                        task: task, // 更新的代辦事項內容
+                        completed: completed === 'true' // 更新完成狀態
+                    })
+                });
+
+                const data = await response.json(); // 解析回應資料
+
+                if (response.ok) {
+                    document.getElementById('responseMessage').textContent = `更新成功！ID: ${id}, 新內容: ${task}, 完成狀態: ${completed}`;
+                    document.getElementById('responseMessage').className = 'response-message success';
+                } else {
+                    document.getElementById('responseMessage').textContent = `更新失敗：${data.message || '未知錯誤'}`;
+                    document.getElementById('responseMessage').className = 'response-message error';
+                }
+            } catch (error) {
+                document.getElementById('responseMessage').textContent = '錯誤：' + error.message;
+                document.getElementById('responseMessage').className = 'response-message error';
+            }
+        }
+
+        
+
+
+        // 刪除代辦事項
+        // 刪除代辦事項
+
+        async function deleteTodo() {
+            const id = document.getElementById('deleteId').value;
+
+            if (!id) {
+                document.getElementById('responseMessage').textContent = '請填寫要刪除的 ID。';
+                document.getElementById('responseMessage').className = 'response-message error';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${apiUrl}/${id}`, {
+                    method: 'DELETE'
+                    // 不設定 Content-Type 標頭
+                });
+
+                const responseText = await response.text(); // 取得原始回應文本
+
+                console.log("API 回應:", responseText); // 打印回應以做除錯
+
+                if (response.ok) {
+                    document.getElementById('responseMessage').textContent = '刪除成功！';
+                    document.getElementById('responseMessage').className = 'response-message success';
+                } else {
+                    // 嘗試解析 JSON
+                    try {
+                        const data = JSON.parse(responseText);
+                        document.getElementById('responseMessage').textContent = `刪除失敗：${data.message || '未知錯誤'}`;
+                    } catch (e) {
+                        // 若解析失敗，顯示通用錯誤訊息
+                        document.getElementById('responseMessage').textContent = '刪除失敗：伺服器回應不是有效的 JSON。';
+                        console.error("解析錯誤:", e);
+                    }
+                    document.getElementById('responseMessage').className = 'response-message error';
+                }
+            } catch (error) {
+                document.getElementById('responseMessage').textContent = '錯誤：' + error.message;
+                document.getElementById('responseMessage').className = 'response-message error';
+            }
+        }
+
+
+    </script>
+</body>
+
+</html>
